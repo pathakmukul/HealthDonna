@@ -1,0 +1,23 @@
+{
+  "name": "healthdonna",
+  "version": "1.0.0",
+  "description": "\"Bot for health chat.\"",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iammap26/HealthDonna.git"
+  },
+  "keywords": [
+    "bot",
+    "health"
+  ],
+  "author": "MUKUL A PATHAK",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/iammap26/HealthDonna/issues"
+  },
+  "homepage": "https://github.com/iammap26/HealthDonna#readme"
+}
