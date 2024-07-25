@@ -671,6 +671,50 @@ st.write("1. Fill in the project details to help the tool generate relevant Jira
 st.write("2. Click on 'Generate Jira Stories' to produce stories, prioritize them, and assign story points.")
 st.write("3. Review the results in the text areas provided.")
 
+......
+import streamlit as st
+from LLMCall import GroqCalls
+from rag_tool import rag_tool
+from langchain.schema import Document
+import pickle
+from pathlib import Path
+
+import streamlit as st
+import pandas as pd
+from LLMCall import GroqCalls
+
+def load_data(uploaded_file):
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        return df
+    return None
+
+def main():
+    st.title("CSV File Uploader and Data Chatbot")
+
+    uploaded_file = st.file_uploader("Upload a CSV file", type="csv")
+    data = load_data(uploaded_file)
+
+    if data is not None:
+        st.subheader("DataFrame Description")
+        st.write(data.describe())
+        st.write("Dataframe Overview:")
+        st.dataframe(data)
+
+
+        user_question = st.text_input("Ask a question about the data:")
+        if st.button("Ask"):
+            if user_question:
+                prompt = f"Write a detailed answer to the following question based on the provided CSV data {data.head(10)}: {user_question}"
+                response = GroqCalls(prompt)
+                st.subheader("Response")
+                st.write(response)
+            else:
+                st.warning("Please enter a question to ask.")
+
+if __name__ == "__main__":
+    main()
+
 
 
 
