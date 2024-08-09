@@ -1,0 +1,100 @@
+import os
+import subprocess
+import streamlit as st
+
+# Function to convert document to reStructuredText using Pandoc
+def convert_to_rst(input_file, output_file):
+    subprocess.run(['pandoc', '-s', '-f', 'docx', '-t', 'rst', '-o', output_file, input_file], check=True)
+
+# Function to initialize a Sphinx project
+def initialize_sphinx_project(sphinx_dir):
+    if not os.path.exists(sphinx_dir):
+        os.makedirs(sphinx_dir)
+
+    # Run sphinx-quickstart only if the directory is empty
+    if not os.listdir(sphinx_dir):
+        subprocess.run(['sphinx-quickstart', '--quiet', '--sep', '--project', 'My Project',
+                        '--author', 'Your Name', '--release', '0.1', '--makefile', '--no-batchfile',
+                        sphinx_dir], check=True)
+
+    # Add '.txt' and '.rst' to source_suffix in conf.py
+    conf_py_path = os.path.join(sphinx_dir, 'source', 'conf.py')
+    with open(conf_py_path, 'a') as conf_py:
+        conf_py.write("\nsource_suffix = {'.rst': 'restructuredtext', '.txt': 'restructuredtext'}\n")
+
+# Function to create an index.rst file
+def create_index_rst(sphinx_dir, rst_files):
+    index_rst_path = os.path.join(sphinx_dir, 'source', 'index.rst')
+    with open(index_rst_path, 'w') as index_rst:
+        index_rst.write('Welcome to My Project\'s documentation!\n')
+        index_rst.write('=======================================\n\n')
+        index_rst.write('.. toctree::\n')
+        index_rst.write('   :maxdepth: 2\n')
+        index_rst.write('   :caption: Contents:\n\n')
+        for rst_file in rst_files:
+            # Add the filename without the extension to the toctree
+            index_rst.write(f'   {os.path.splitext(os.path.basename(rst_file))[0]}\n')
+
+# Function to build the Sphinx documentation
+def build_sphinx(sphinx_dir):
+    try:
+        result = subprocess.run(['make', 'html'], cwd=sphinx_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        st.text(result.stdout.decode())
+        st.text(result.stderr.decode())
+    except subprocess.CalledProcessError as e:
+        st.error("Error building Sphinx documentation.")
+        st.error(e.stderr.decode())
+        return False
+    return True
+
+# Function to find the correct build directory
+def find_html_dir(sphinx_dir):
+    # Check both _build/html and build/html directories
+    for possible_dir in ['_build/html', 'build/html']:
+        full_path = os.path.join(sphinx_dir, possible_dir)
+        if os.path.exists(full_path):
+            return full_path
+    return None
+
+# Streamlit UI
+st.title("Document to Sphinx Converter")
+
+uploaded_file = st.file_uploader("Choose a document", type=["docx", "txt", "rst"])
+
+if uploaded_file is not None:
+    # Use a persistent directory for Sphinx project
+    sphinx_dir = os.path.join(os.getcwd(), 'sphinx_docs')
+    initialize_sphinx_project(sphinx_dir)
+
+    # Convert to rst if needed and copy to Sphinx source directory
+    rst_files = []
+    input_path = os.path.join(sphinx_dir, 'source', uploaded_file.name)
+    
+    with open(input_path, 'wb') as f:
+        f.write(uploaded_file.getbuffer())
+
+    if uploaded_file.name.endswith('.docx'):
+        rst_path = os.path.join(sphinx_dir, 'source', os.path.splitext(uploaded_file.name)[0] + '.rst')
+        convert_to_rst(input_path, rst_path)
+        rst_files.append(rst_path)
+    elif uploaded_file.name.endswith('.rst') or uploaded_file.name.endswith('.txt'):
+        rst_files.append(input_path)
+
+    # Create index.rst
+    create_index_rst(sphinx_dir, rst_files)
+
+    # Build the Sphinx documentation
+    if build_sphinx(sphinx_dir):
+        html_dir = find_html_dir(sphinx_dir)
+        
+        if html_dir:
+            index_html_path = os.path.join(html_dir, 'index.html')
+            st.success("Sphinx documentation generated successfully!")
+            st.markdown(f"Page created at: `{index_html_path}`")
+            if st.button('Open Documentation'):
+                if os.name == 'posix':  # macOS or Linux
+                    subprocess.run(['open', index_html_path])
+                elif os.name == 'nt':   # Windows
+                    subprocess.run(['start', index_html_path], shell=True)
+        else:
+            st.error("The HTML file does not exist. Please check the directory contents above for debugging.")
